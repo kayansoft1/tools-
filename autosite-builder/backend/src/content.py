@@ -19,18 +19,21 @@ class ContentGenerator:
     def __init__(self, api_key: str, model_name: str = MODEL_NAME) -> None:
         self.api_key = api_key
         self.model_name = model_name
+        self.client = None
+        if not api_key:
+            logger.warning("لا يوجد مفتاح Gemini؛ سيُستخدم المحتوى الافتراضي.")
+            return
         try:
             self.client = genai.Client(api_key=self.api_key)
         except Exception as exc:  # noqa: BLE001
             logger.error(f"فشل تهيئة Gemini: {exc}")
-            self.client = None
 
     async def generate(self, business: Business, enrichment: Enrichment) -> SiteContent:
         """يرسل البرومبت إلى Gemini ويعيد SiteContent."""
+        if not self.client:
+            return self._default_content(business)
         prompt = self._build_prompt(business, enrichment)
         try:
-            if not self.client:
-                raise RuntimeError("عميل Gemini غير مهيأ")
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self.model_name,

@@ -54,6 +54,7 @@ class Discovery:
     ) -> List[Business]:
         """يبحث في كل أحياء المدينة ويرجع قائمة من Business."""
         results: List[Business] = []
+        seen: set[str] = set()
         districts = self._get_districts(city)
         for district in districts:
             if len(results) >= limit:
@@ -62,8 +63,10 @@ class Discovery:
             for place in places:
                 try:
                     business = self._parse_place(place, city, country)
-                    if business is None:
+                    # الأحياء قد تتداخل في النتائج؛ نتجاهل أي منشأة مكررة
+                    if business is None or business.place_id in seen:
                         continue
+                    seen.add(business.place_id)
                     results.append(business)
                 except Exception as exc:  # noqa: BLE001
                     logger.error(f"فشل تحويل منشأة: {exc}")

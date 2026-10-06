@@ -1,5 +1,6 @@
 """اختبارات وحدة لخط الإنتاج، لا تحتاج مفاتيح API خارجية."""
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -112,6 +113,29 @@ def test_discovery_parses_place_with_website():
 def test_discovery_skips_place_without_id():
     discovery = Discovery(api_key="fake")
     assert discovery._parse_place({}, "جدة", "السعودية") is None
+
+
+@pytest.mark.asyncio
+async def test_discovery_deduplicates_across_districts(monkeypatch):
+    discovery = Discovery(api_key="fake")
+    shared = {
+        "id": "dup-1",
+        "displayName": {"text": "مكرر"},
+        "types": ["restaurant"],
+    }
+    unique = {"id": "uniq-1", "displayName": {"text": "فريد"}, "types": ["cafe"]}
+
+    async def fake_search_district(category, district, city):
+        return [shared, unique]
+
+    monkeypatch.setattr(discovery, "_search_district", fake_search_district)
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr("src.discovery.asyncio.sleep", lambda *_: real_sleep(0))
+    monkeypatch.setattr("src.discovery.DISTRICTS_BY_CITY", {"جدة": ["حي1", "حي2"]})
+
+    results = await discovery.search("جدة", "مطاعم", "السعودية", limit=10)
+    ids = [b.place_id for b in results]
+    assert ids == ["dup-1", "uniq-1"]
 
 
 def test_content_default_fallback_is_arabic():
