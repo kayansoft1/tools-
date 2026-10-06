@@ -69,11 +69,57 @@ export const getStaticProps: GetStaticProps<Props> = async (context) => {
 
 export default function SitePage({ data }: Props) {
   const { content } = data;
+  const title = content.seo_title || data.name;
+  const description = content.seo_description || content.short_description;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: data.name,
+    description: content.short_description,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: data.address,
+      addressLocality: data.city,
+    },
+    telephone: data.phone || undefined,
+    aggregateRating:
+      data.rating > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: data.rating,
+            reviewCount: data.reviews_count,
+          }
+        : undefined,
+    geo:
+      data.latitude != null && data.longitude != null
+        ? {
+            "@type": "GeoCoordinates",
+            latitude: data.latitude,
+            longitude: data.longitude,
+          }
+        : undefined,
+  };
   return (
     <>
       <Head>
-        <title>{content.seo_title || data.name}</title>
-        <meta name="description" content={content.seo_description} />
+        <html lang="ar" dir="rtl" />
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:locale" content="ar_SA" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <link
+          rel="canonical"
+          href={`https://${process.env.NEXT_PUBLIC_SITE_DOMAIN || "localhost"}/s/${data.place_id}`}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </Head>
       <main dir="rtl" className="font-arabic">
         <Hero data={data} />

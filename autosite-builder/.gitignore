@@ -8,3 +8,13 @@ venv/
 .venv/
 creds.json
 .DS_Store
+
+# مخرجات الأدوات
+.pytest_cache/
+.ruff_cache/
+coverage/
+*.egg-info/
+.vercel/
+
+# مخرجات TypeScript
+*.tsbuildinfo

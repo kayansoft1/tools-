@@ -3,8 +3,8 @@
 from typing import Any, Dict, List, Optional
 
 import psycopg2
-from psycopg2.extras import Json, RealDictCursor
 from loguru import logger
+from psycopg2.extras import Json, RealDictCursor
 
 from .models import Business
 
@@ -45,12 +45,14 @@ class Database:
             """
             CREATE TABLE IF NOT EXISTS sites (
                 id SERIAL PRIMARY KEY,
-                place_id TEXT,
+                place_id TEXT UNIQUE,
                 site_url TEXT,
                 content JSONB,
                 deployed_at TIMESTAMP DEFAULT NOW()
             );
             """,
+            # يضمن قيد التفرد حتى لو كان الجدول منشأً بنسخة قديمة
+            "CREATE UNIQUE INDEX IF NOT EXISTS sites_place_id_key ON sites (place_id);",
         ]
         try:
             if not self.conn:
@@ -124,7 +126,7 @@ class Database:
                     """
                     INSERT INTO sites (place_id, site_url, content)
                     VALUES (%s, %s, %s)
-                    ON CONFLICT DO NOTHING;
+                    ON CONFLICT (place_id) DO NOTHING;
                     """,
                     (place_id, site_url, Json(content or {})),
                 )

@@ -1,6 +1,6 @@
 """إضافة صف متابعة لكل منشأة في Google Sheets."""
 
-from datetime import date
+from datetime import UTC, datetime
 
 import gspread
 from loguru import logger
@@ -24,13 +24,15 @@ class Sheets:
             logger.error(f"فشل الاتصال بـ Google Sheets: {exc}")
 
     def _ensure_headers(self) -> None:
-        """يتأكد من وجود صف العناوين، ويضيفه إذا كان الشيت فارغاً."""
+        """يضيف صف العناوين فقط إذا كان الشيت فارغاً، حتى لا نزيح بيانات موجودة."""
         try:
             if not self.worksheet:
                 return
             existing = self.worksheet.row_values(1)
-            if existing != HEADERS:
+            if not existing:
                 self.worksheet.insert_row(HEADERS, index=1)
+            elif existing != HEADERS:
+                logger.warning("عنوان الشيت مختلف عن المتوقع؛ لم يتم تعديله.")
         except Exception as exc:  # noqa: BLE001
             logger.error(f"فشل ضبط عناوين الشيت: {exc}")
 
@@ -48,7 +50,7 @@ class Sheets:
                 site_url,
                 "new",
                 "",
-                date.today().strftime("%Y-%m-%d"),
+                datetime.now(UTC).strftime("%Y-%m-%d"),
             ]
             self.worksheet.append_row(row)
         except Exception as exc:  # noqa: BLE001

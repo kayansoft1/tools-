@@ -10,16 +10,17 @@
 2. استبعاد كل منشأة لديها موقع إلكتروني.
 3. ترتيب الباقي حسب الأولوية (عدد المراجعات، التقييم، وجود هاتف، وزن الفئة).
 4. البحث عن روابط إنستقرام وتيك توك وسناب شات وفيسبوك عبر SerpAPI.
-5. إرسال بيانات كل منشأة إلى Gemini 1.5 Flash لتوليد محتوى عربي.
+5. إرسال بيانات كل منشأة إلى Gemini 2.0 Flash لتوليد محتوى عربي.
 6. بناء ملف بيانات JSON لكل منشأة.
 7. حفظ البيانات في قاعدة بيانات PostgreSQL.
 8. إضافة صف متابعة لكل منشأة في Google Sheets.
+9. (اختياري) نشر ملفات JSON إلى GitHub ليُعيد Vercel بناء المواقع تلقائياً.
 
 ## التقنيات
 
-**Backend:** Python، httpx (async)، pydantic، psycopg2، google-generativeai، google-search-results، gspread، loguru، tenacity.
+**Backend:** Python 3.11+، httpx (async)، pydantic v2، psycopg2، google-genai، google-search-results، gspread، loguru، tenacity.
 
-**Frontend:** Next.js 14.2، React 18.3، TypeScript 5.4، Tailwind CSS 3.4.
+**Frontend:** Next.js 14.2 (آخر إصدار مصحّح أمنياً)، React 18.3، TypeScript 5.4، Tailwind CSS 3.4.
 
 ## التثبيت
 
@@ -62,7 +63,40 @@ npm install
 npm run dev
 ```
 
-كل منشأة تحصل على صفحة على المسار `/s/<place_id>`.
+كل منشأة تحصل على صفحة على المسار `/s/<place_id>`، مع خريطة موقع على `/sitemap.xml`.
+
+## قاعدة بيانات محلية (Docker)
+
+لتشغيل PostgreSQL محلياً دون تثبيت:
+
+```bash
+docker compose up -d db
+```
+
+ثم ضع في `.env`:
+
+```
+DATABASE_URL=postgresql://autosite:autosite@localhost:5432/autosite
+```
+
+## الاختبار والفحص
+
+```bash
+cd backend
+pytest -q          # 13 اختباراً لا تحتاج مفاتيح API
+ruff check .       # فحص الكود
+```
+
+## النشر التلقائي (GitHub + Vercel)
+
+```bash
+cd backend
+python publish.py "جدة" "مطاعم" 5
+```
+
+يبني المواقع ثم يدفع ملفات `frontend/data/*.json` إلى GitHub، فيُعيد Vercel بناء المواقع تلقائياً.
+
+لضبط Vercel: اختر المستودع ثم اجعل **Root Directory** هو `autosite-builder/frontend`.
 
 ## بنية المشروع
 

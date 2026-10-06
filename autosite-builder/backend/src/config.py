@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     google_sheets_creds: str = "creds.json"
     google_sheets_name: str = "AutoSite CRM"
     log_level: str = "INFO"
+    gemini_model: str = "gemini-2.0-flash"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -36,7 +36,7 @@ async def process(city: str, category: str, country: str = "", limit: int = 10) 
     ranked = qualify(without_website)[:limit]
 
     enrichment_service = Enrichment(settings.serpapi_key)
-    content_generator = ContentGenerator(settings.gemini_api_key)
+    content_generator = ContentGenerator(settings.gemini_api_key, settings.gemini_model)
     builder = SiteBuilder(FRONTEND_PATH)
     sheets = Sheets(settings.google_sheets_creds, settings.google_sheets_name)
 
@@ -65,4 +65,5 @@ if __name__ == "__main__":
     city_arg = sys.argv[1] if len(sys.argv) > 1 else "جدة"
     category_arg = sys.argv[2] if len(sys.argv) > 2 else "مطاعم"
     limit_arg = int(sys.argv[3]) if len(sys.argv) > 3 else 10
-    asyncio.run(process(city_arg, category_arg, "", limit_arg))
+    country_arg = sys.argv[4] if len(sys.argv) > 4 else ""
+    asyncio.run(process(city_arg, category_arg, country_arg, limit_arg))

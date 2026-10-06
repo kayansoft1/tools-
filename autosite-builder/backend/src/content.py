@@ -1,37 +1,41 @@
-"""توليد محتوى الموقع باللغة العربية عبر Gemini 1.5 Flash."""
+"""توليد محتوى الموقع باللغة العربية عبر Gemini Flash (حزمة google-genai)."""
 
 import asyncio
 import json
 from typing import Any, Dict
 
-import google.generativeai as genai
+from google import genai
 from loguru import logger
 
 from .models import Business, Enrichment, SiteContent
 from .utils import clean_json
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.0-flash"
 
 
 class ContentGenerator:
     """يولّد وصفاً وخدمات وأسئلة شائعة وبيانات SEO لمنشأة."""
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, model_name: str = MODEL_NAME) -> None:
         self.api_key = api_key
+        self.model_name = model_name
         try:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel(MODEL_NAME)
+            self.client = genai.Client(api_key=self.api_key)
         except Exception as exc:  # noqa: BLE001
             logger.error(f"فشل تهيئة Gemini: {exc}")
-            self.model = None
+            self.client = None
 
     async def generate(self, business: Business, enrichment: Enrichment) -> SiteContent:
         """يرسل البرومبت إلى Gemini ويعيد SiteContent."""
         prompt = self._build_prompt(business, enrichment)
         try:
-            if not self.model:
-                raise RuntimeError("موديل Gemini غير مهيأ")
-            response = await asyncio.to_thread(self.model.generate_content, prompt)
+            if not self.client:
+                raise RuntimeError("عميل Gemini غير مهيأ")
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self.model_name,
+                contents=prompt,
+            )
             raw_text = getattr(response, "text", "") or ""
             data: Dict[str, Any] = json.loads(clean_json(raw_text))
             return SiteContent(

@@ -1,7 +1,7 @@
 """البحث عن المنشآت عبر Google Places API الإصدار v1 (غير متزامن)."""
 
 import asyncio
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 from loguru import logger
@@ -62,6 +62,8 @@ class Discovery:
             for place in places:
                 try:
                     business = self._parse_place(place, city, country)
+                    if business is None:
+                        continue
                     results.append(business)
                 except Exception as exc:  # noqa: BLE001
                     logger.error(f"فشل تحويل منشأة: {exc}")
@@ -112,16 +114,26 @@ class Discovery:
         """يرجع قائمة أحياء المدينة أو القيمة الافتراضية."""
         return DISTRICTS_BY_CITY.get((city or "").strip(), ["وسط المدينة"])
 
-    def _parse_place(self, place: Dict[str, Any], city: str, country: str) -> Business:
-        """يحول عنصر Places API إلى كائن Business."""
+    def _parse_place(
+        self, place: Dict[str, Any], city: str, country: str
+    ) -> Optional[Business]:
+        """يحول عنصر Places API إلى كائن Business، أو None إذا كان بلا معرّف."""
+        place_id = place.get("id")
+        if not place_id:
+            logger.warning("تم تجاهل منشأة بلا place_id.")
+            return None
         display_name = place.get("displayName") or {}
         location = place.get("location") or {}
         types = place.get("types") or []
         raw_category = types[0] if types else ""
         website = place.get("websiteUri")
+        if isinstance(display_name, dict):
+            name = display_name.get("text", "")
+        else:
+            name = str(display_name)
         return Business(
-            place_id=place.get("id", ""),
-            name=display_name.get("text", "") if isinstance(display_name, dict) else str(display_name),
+            place_id=place_id,
+            name=name,
             category=translate_category(raw_category),
             city=city,
             country=country,
