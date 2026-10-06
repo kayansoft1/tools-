@@ -51,4 +51,4 @@ npm run dev
 
 ## النشر
 
-GitHub + Vercel تلقائياً. لا تكتب كود نشر يدوي. المستودع: `kayansoft1/tools`.
+GitHub + Vercel تلقائياً. لا تكتب كود نشر يدوي. المستودع: `kayansoft1/tools-`.
