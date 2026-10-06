@@ -3,6 +3,7 @@
 import asyncio
 import os
 import sys
+from typing import Any, Callable, Dict, Optional
 
 from loguru import logger
 
@@ -21,19 +22,48 @@ FRONTEND_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "frontend")
 )
 
+# دالة اختيارية تُبلّغ عن التقدّم: progress(event, data)
+ProgressCallback = Optional[Callable[[str, Dict[str, Any]], None]]
 
-async def process(city: str, category: str, country: str = "", limit: int = 10) -> int:
+
+def _emit(progress: ProgressCallback, event: str, data: Dict[str, Any]) -> None:
+    """يستدعي دالة التقدّم بأمان إن وُجدت."""
+    if progress is None:
+        return
+    try:
+        progress(event, data)
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"فشل إرسال حدث التقدّم {event}: {exc}")
+
+
+async def process(
+    city: str,
+    category: str,
+    country: str = "",
+    limit: int = 10,
+    progress: ProgressCallback = None,
+) -> int:
     """ينفذ كل مراحل خط الإنتاج ويرجع عدد المواقع المبنية."""
     database = Database(settings.database_url)
     database.create_tables()
 
+    _emit(progress, "discovering", {"city": city, "category": category})
     discovery = Discovery(settings.google_places_api_key)
     businesses = await discovery.search(city, category, country, limit * 3)
 
     # استبعاد كل منشأة عندها موقع إلكتروني
     without_website = [b for b in businesses if not b.has_website]
-
     ranked = qualify(without_website)[:limit]
+    _emit(
+        progress,
+        "ranked",
+        {
+            "found": len(businesses),
+            "without_website": len(without_website),
+            "selected": len(ranked),
+            "names": [b.name for b in ranked],
+        },
+    )
 
     enrichment_service = Enrichment(settings.serpapi_key)
     content_generator = ContentGenerator(settings.gemini_api_key, settings.gemini_model)
@@ -42,6 +72,7 @@ async def process(city: str, category: str, country: str = "", limit: int = 10) 
 
     built_count = 0
     for business in ranked:
+        _emit(progress, "building", {"name": business.name, "place_id": business.place_id})
         try:
             database.insert_business(business)
             enrichment = await enrichment_service.enrich(business)
@@ -52,11 +83,27 @@ async def process(city: str, category: str, country: str = "", limit: int = 10) 
             sheets.add_lead(business, site_url)
             built_count += 1
             logger.info(f"تم بناء موقع: {business.name} ({place_id})")
+            _emit(
+                progress,
+                "built",
+                {
+                    "name": business.name,
+                    "place_id": place_id,
+                    "site_url": site_url,
+                    "built": built_count,
+                },
+            )
         except Exception as exc:  # noqa: BLE001
             logger.error(f"فشل معالجة منشأة {getattr(business, 'name', '?')}: {exc}")
+            _emit(
+                progress,
+                "failed",
+                {"name": getattr(business, "name", "?"), "error": str(exc)},
+            )
 
     database.close()
     logger.success(f"اكتمل البناء: {built_count} موقع.")
+    _emit(progress, "done", {"built": built_count})
     return built_count
 
 

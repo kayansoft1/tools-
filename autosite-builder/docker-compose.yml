@@ -16,5 +16,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # واجهة برمجية للتحكم عبر الويب (لوحة التحكم)
+  api:
+    build: ./backend
+    container_name: autosite-api
+    command: ["python", "api.py"]
+    environment:
+      DATABASE_URL: postgresql://autosite:autosite@db:5432/autosite
+      API_PORT: "8000"
+      API_CORS_ORIGINS: "*"
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      SERPAPI_KEY: ${SERPAPI_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      GOOGLE_SHEETS_CREDS: ${GOOGLE_SHEETS_CREDS:-creds.json}
+      GOOGLE_SHEETS_NAME: ${GOOGLE_SHEETS_NAME:-AutoSite CRM}
+    ports:
+      - "8000:8000"
+    volumes:
+      # ملفات المواقع المولَّدة تُكتب هنا ليقرأها الـ frontend
+      - ./frontend/data:/frontend/data
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:

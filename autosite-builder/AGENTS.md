@@ -10,16 +10,20 @@ AutoSite Builder: نظام آلي يأخذ (مدينة + فئة) فيبني مو
 ## البنية
 
 - `autosite-builder/backend/` — Python، خط الإنتاج الكامل.
-  - `main.py` — نقطة التشغيل: `python main.py "جدة" "مطاعم" 5`
+  - `main.py` — نقطة التشغيل: `python main.py "جدة" "مطاعم" 5` (و`process()` تقبل `progress`).
+  - `api.py` — واجهة REST (FastAPI) للتحكم عبر الويب: `python api.py` على المنفذ 8000.
+  - `src/jobs.py` — إدارة مهام البناء في الخلفية (مهمة واحدة نشطة، سجلّات، تنظيف).
   - `main_test.py` — اختبار بدون مفاتيح API (يكتب JSON تجريبي في `frontend/data`).
   - `publish.py` — يبني المواقع ثم يدفع ملفات JSON إلى GitHub (لإعادة بناء Vercel).
   - `tests/` — اختبارات pytest لا تحتاج مفاتيح API.
-  - `src/` — config, models, utils, db, discovery, qualification, enrichment, content, builder, sheets.
+  - `src/` — config, models, utils, db, discovery, qualification, enrichment, content, builder, jobs, sheets.
 - `autosite-builder/frontend/` — Next.js 14.2 + TypeScript + Tailwind (RTL).
+  - `pages/admin.tsx` — لوحة التحكم (بدء مهمة، متابعة تقدّم حيّة، المهام، المنشآت).
+  - `lib/api.ts` — عميل الـ API (يقرأ `NEXT_PUBLIC_API_URL`).
   - صفحة ديناميكية: `pages/s/[slug].tsx` تقرأ `data/<place_id>.json` (ISR 60s, fallback blocking).
   - `pages/sitemap.xml.tsx` — خريطة موقع ديناميكية. `public/robots.txt`.
 - `.github/workflows/ci.yml` — CI: backend (ruff + pytest) و frontend (typecheck + build).
-- `autosite-builder/docker-compose.yml` — PostgreSQL محلي للتطوير.
+- `autosite-builder/docker-compose.yml` — PostgreSQL + API محليان للتطوير.
 
 ## قواعد يجب الالتزام بها
 
@@ -42,6 +46,7 @@ python -m pytest -q                  # اختبارات الوحدة
 ruff check .                         # فحص الكود
 python main_test.py                  # اختبار بدون مفاتيح
 python main.py "جدة" "مطاعم" 5       # التشغيل الكامل
+python api.py                        # واجهة التحكم عبر الويب
 python publish.py "جدة" "مطاعم" 5    # بناء + نشر إلى GitHub
 
 # frontend

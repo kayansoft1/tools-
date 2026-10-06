@@ -49,11 +49,55 @@ cp .env.example .env
 
 ## التشغيل
 
+### 1) عبر لوحة التحكم (واجهات الويب) — الطريقة الموصى بها
+
+شغّل الـ API ثم الواجهة:
+
+```bash
+# نافذة أولى: قاعدة البيانات
+docker compose up -d db
+
+# نافذة ثانية: واجهة برمجية + لوحة التحكم
+cd backend
+python api.py            # يعمل على http://localhost:8000
+
+# نافذة ثالثة: الواجهة الأمامية
+cd frontend
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+```
+
+ثم افتح `http://localhost:3000/admin`، واختر المدينة والفئة وعدد المواقع، واضغط
+«ابدأ البناء» — ستتابع التقدّم والسجلّات مباشرة، وترى المهام السابقة والمنشآت المخزّنة.
+
+أو شغّل الـ API ضمن Docker مع قاعدة البيانات:
+
+```bash
+docker compose up -d        # يشغّل db + api معاً
+```
+
+### 2) عبر سطر الأوامر
+
 ```bash
 python main.py "جدة" "مطاعم" 5
 ```
 
 الوسائط بالترتيب: المدينة، الفئة، عدد المنشآت. القيم الافتراضية: جدة، مطاعم، 10.
+
+## واجهة الـ API
+
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| GET | `/api/health` | جاهزية الخدمة ووجود المفاتيح |
+| GET | `/api/config` | القيم الافتراضية (دون كشف المفاتيح) |
+| GET | `/api/jobs` | كل المهام |
+| POST | `/api/jobs` | بدء مهمة بناء جديدة `{city, category, country, limit}` |
+| GET | `/api/jobs/{id}` | حالة مهمة مع سجلّات التقدّم |
+| GET | `/api/leads` | المنشآت المخزّنة في قاعدة البيانات |
+
+التوثيق التفاعلي (Swagger) متاح على `http://localhost:8000/docs`.
+
+لإتاحة الـ API للواجهة على نطاق آخر، اضبط `API_CORS_ORIGINS` (مفصولة بفواصل).
 
 ## تشغيل الـ Frontend
 
@@ -83,7 +127,7 @@ DATABASE_URL=postgresql://autosite:autosite@localhost:5432/autosite
 
 ```bash
 cd backend
-pytest -q          # 13 اختباراً لا تحتاج مفاتيح API
+pytest -q          # 24 اختباراً لا تحتاج مفاتيح API
 ruff check .       # فحص الكود
 ```
 
@@ -112,16 +156,20 @@ autosite-builder/
 │   │   ├── enrichment.py      # SerpAPI للتواصل الاجتماعي
 │   │   ├── content.py         # Gemini لتوليد المحتوى
 │   │   ├── builder.py         # بناء ملفات JSON
+│   │   ├── jobs.py            # إدارة مهام البناء في الخلفية
 │   │   ├── sheets.py          # Google Sheets
 │   │   └── utils.py           # دوال مساعدة
 │   ├── main.py                # خط الإنتاج الكامل
+│   ├── api.py                 # واجهة REST + لوحة التحكم
 │   ├── main_test.py           # اختبار بدون مفاتيح API
 │   └── requirements.txt
 └── frontend/
     ├── pages/
     │   ├── _app.tsx
     │   ├── index.tsx
+    │   ├── admin.tsx          # لوحة التحكم
     │   └── s/[slug].tsx
+    ├── lib/api.ts             # عميل الـ API
     ├── components/            # Hero, Services, About, Contact, Footer, WhatsAppButton
     ├── data/                  # ملفات JSON لكل منشأة
     └── styles/globals.css

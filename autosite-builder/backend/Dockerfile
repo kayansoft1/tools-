@@ -15,4 +15,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENTRYPOINT ["python", "main.py"]
+# يمكن تجاوز الأمر لتشغيل الـ API: docker run ... python api.py
+CMD ["python", "main.py"]
